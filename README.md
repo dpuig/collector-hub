@@ -1,5 +1,7 @@
 # Temperature Collector
-> Api: <server>:8080/value
+> IoT Data Collector Hub
+
+API port :8080
 
 ## POST Request Payload
 ```json
