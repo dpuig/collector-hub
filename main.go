@@ -1,13 +1,9 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
-	"math/rand"
 	"net/http"
-	"time"
 
 	"github.com/go-kit/kit/endpoint"
 	httptransport "github.com/go-kit/kit/transport/http"
@@ -47,7 +43,7 @@ type collectorService struct{}
 
 func (collectorService) Temperature(_ context.Context, v valueRequest) float64 {
 	terminalTemp.Add(v.Value)
-	terminalTempSet.Add(v.Value)
+	terminalTempSet.Set(v.Value)
 	valuesTempCollected.With(prometheus.Labels{"terminal": v.Terminal, "sensor": v.Sensor}).Inc()
 	return v.Value
 }
@@ -111,13 +107,6 @@ func main() {
 		httptransport.EncodeJSONResponse,
 	)
 
-	go func() {
-		for {
-			SendValue()
-			time.Sleep(time.Second)
-		}
-	}()
-
 	http.Handle("/value", valueHTTPHandler)
 	http.Handle("/metrics", promhttp.Handler())
 	log.Info("API running port: 8080")
@@ -130,30 +119,4 @@ func decodeValueHTTPRequest(_ context.Context, r *http.Request) (interface{}, er
 		return nil, err
 	}
 	return request, nil
-}
-
-func SendValue() {
-	value := valueRequest{
-		Timestamp: time.Now().Unix(),
-		Terminal:  "Test Terminal",
-		Sensor:    "temperature",
-		Value:     rand.Float64(),
-	}
-	jsonValue, _ := json.Marshal(value)
-	fmt.Printf("%+v\n", value)
-	u := bytes.NewReader(jsonValue)
-
-	req, err := http.NewRequest("POST", "http://localhost:8080/value", u)
-	if err != nil {
-		fmt.Println("Error is req: ", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	// create a Client
-	client := &http.Client{}
-	// Do sends an HTTP request and
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Println("error in send req: ", err.Error())
-	}
-	defer resp.Body.Close()
 }
