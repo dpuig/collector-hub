@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/arl/statsviz"
 	"github.com/go-kit/kit/endpoint"
 	httptransport "github.com/go-kit/kit/transport/http"
 	validation "github.com/go-ozzo/ozzo-validation"
+	"github.com/kamilsk/tracer"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
@@ -72,6 +74,7 @@ type valueResponse struct {
 
 func makeValueEndpoint(svc collectorService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
+		defer tracer.Fetch(ctx).Start().Stop()
 		req := request.(valueRequest)
 		log.WithFields(log.Fields{
 			"timestamp": req.Timestamp,
@@ -110,6 +113,7 @@ func main() {
 	http.Handle("/value", valueHTTPHandler)
 	http.Handle("/metrics", promhttp.Handler())
 	log.Info("API running port: 8080")
+	statsviz.RegisterDefault()
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
